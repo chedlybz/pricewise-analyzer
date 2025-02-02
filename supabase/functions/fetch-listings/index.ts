@@ -7,24 +7,40 @@ const corsHeaders = {
 };
 
 Deno.serve(async (req) => {
-  // Handle CORS
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
-
   try {
-    const { location, propertyType, area } = await req.json();
-    console.log('Received request with params:', { location, propertyType, area });
-    
-    const apiKey = Deno.env.get('FIRECRAWL_API_KEY');
-    if (!apiKey) {
-      console.error('FIRECRAWL_API_KEY not found in environment variables');
-      throw new Error('API key not configured');
+    // Handle CORS
+    if (req.method === 'OPTIONS') {
+      return new Response(null, { headers: corsHeaders });
     }
 
-    const firecrawl = new FirecrawlApp({ apiKey });
+    // Validate request body
+    if (!req.body) {
+      throw new Error('Request body is required');
+    }
 
-    // Construire les URLs des principaux sites immobiliers français
+    const { location, propertyType, area } = await req.json();
+    
+    // Validate required parameters
+    if (!location || !propertyType || !area) {
+      throw new Error('Missing required parameters: location, propertyType, and area are required');
+    }
+
+    console.log('Processing request with params:', { location, propertyType, area });
+
+    // Get and validate API key
+    const apiKey = Deno.env.get('FIRECRAWL_API_KEY');
+    if (!apiKey) {
+      console.error('FIRECRAWL_API_KEY not found');
+      throw new Error('API configuration error');
+    }
+
+    // Initialize Firecrawl with timeout
+    const firecrawl = new FirecrawlApp({ 
+      apiKey,
+      timeout: 30000 // 30 second timeout
+    });
+
+    // Define target URLs
     const urls = [
       `https://www.seloger.com/immobilier/achat/${propertyType}/${location}`,
       `https://www.leboncoin.fr/recherche?category=9&locations=${location}&real_estate_type=${propertyType === 'apartment' ? 'appartement' : 'maison'}`
@@ -32,12 +48,13 @@ Deno.serve(async (req) => {
 
     const results = [];
     
+    // Process each URL with individual error handling
     for (const url of urls) {
-      console.log(`Crawling URL: ${url}`);
-      
       try {
+        console.log(`Starting crawl for URL: ${url}`);
+        
         const response = await firecrawl.crawlUrl(url, {
-          limit: 5,
+          limit: 3, // Reduced limit to prevent timeouts
           scrapeOptions: {
             selectors: {
               price: '.price, .price-label',
@@ -48,18 +65,19 @@ Deno.serve(async (req) => {
           }
         });
 
-        console.log(`Crawl response for ${url}:`, response);
-
-        if (response.success) {
+        if (response.success && response.data) {
+          console.log(`Successfully crawled ${url}, found ${response.data.length} results`);
           results.push(...response.data);
+        } else {
+          console.warn(`No data found for ${url}`);
         }
       } catch (error) {
-        console.error(`Error crawling ${url}:`, error);
-        // Continue with other URLs even if one fails
+        console.error(`Failed to crawl ${url}:`, error);
+        // Continue with other URLs
       }
     }
 
-    // Filtrer et formater les résultats
+    // Process and filter results
     const listings = results
       .filter(item => item.price && item.area)
       .map(item => ({
@@ -70,25 +88,35 @@ Deno.serve(async (req) => {
         url: item.url,
         title: item.title
       }))
-      .filter(item => 
-        Math.abs(item.area - area) <= 20 // À 20m² près
-      );
+      .filter(item => Math.abs(item.area - area) <= 20);
 
-    console.log('Filtered listings:', listings);
+    console.log(`Processed ${listings.length} relevant listings`);
 
-    return new Response(JSON.stringify(listings), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  } catch (error) {
-    console.error('Error in fetch-listings:', error);
     return new Response(
-      JSON.stringify({ 
-        error: error.message,
-        details: error.stack
-      }), 
+      JSON.stringify(listings),
+      {
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+  } catch (error) {
+    console.error('Edge function error:', error);
+    
+    return new Response(
+      JSON.stringify({
+        error: 'Failed to process request',
+        details: error.message,
+        stack: error.stack
+      }),
       {
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json'
+        }
       }
     );
   }
