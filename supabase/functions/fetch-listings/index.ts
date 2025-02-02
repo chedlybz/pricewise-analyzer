@@ -1,4 +1,5 @@
-import FirecrawlApp from '@mendable/firecrawl-js';
+import 'https://esm.sh/@supabase/supabase-js@2.38.4'
+import { FirecrawlApp } from 'npm:@mendable/firecrawl-js'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
