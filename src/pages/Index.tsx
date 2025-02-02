@@ -14,19 +14,25 @@ const Index = () => {
     userPrice: number;
     marketPrice: number;
     difference: number;
+    location: string;
+    propertyType: string;
+    area: number;
   } | null>(null);
 
   const handleAnalysis = (data: FormData) => {
     // Simulation d'un calcul de prix du marché
     // Dans une version réelle, ceci serait basé sur des données réelles
     const averagePricePerM2 = data.propertyType === "apartment" ? 3500 : 3000;
-    const locationFactor = data.location.toLowerCase().includes("paris") ? 1.5 : 1;
+    const locationFactor = data.location.toLowerCase().includes('paris') ? 1.5 : 1;
     const estimatedMarketPrice = Math.round(data.area * averagePricePerM2 * locationFactor);
     
     setAnalysis({
       userPrice: data.price,
       marketPrice: estimatedMarketPrice,
       difference: data.price - estimatedMarketPrice,
+      location: data.location,
+      propertyType: data.propertyType,
+      area: data.area
     });
   };
 
@@ -49,6 +55,9 @@ const Index = () => {
               userPrice={analysis.userPrice}
               marketPrice={analysis.marketPrice}
               difference={analysis.difference}
+              location={analysis.location}
+              propertyType={analysis.propertyType}
+              area={analysis.area}
             />
           )}
         </div>
