@@ -7,18 +7,24 @@ const corsHeaders = {
 };
 
 Deno.serve(async (req) => {
+  // Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const { location, propertyType, area } = await req.json();
+    console.log('Received request with params:', { location, propertyType, area });
     
-    const firecrawl = new FirecrawlApp({ 
-      apiKey: Deno.env.get('FIRECRAWL_API_KEY') || '' 
-    });
+    const apiKey = Deno.env.get('FIRECRAWL_API_KEY');
+    if (!apiKey) {
+      console.error('FIRECRAWL_API_KEY not found in environment variables');
+      throw new Error('API key not configured');
+    }
 
-    // Construire les URLs des principaux sites immobiliers
+    const firecrawl = new FirecrawlApp({ apiKey });
+
+    // Construire les URLs des principaux sites immobiliers français
     const urls = [
       `https://www.seloger.com/immobilier/achat/${propertyType}/${location}`,
       `https://www.leboncoin.fr/recherche?category=9&locations=${location}&real_estate_type=${propertyType === 'apartment' ? 'appartement' : 'maison'}`
@@ -27,22 +33,29 @@ Deno.serve(async (req) => {
     const results = [];
     
     for (const url of urls) {
-      console.log(`Crawling: ${url}`);
+      console.log(`Crawling URL: ${url}`);
       
-      const response = await firecrawl.crawlUrl(url, {
-        limit: 10,
-        scrapeOptions: {
-          selectors: {
-            price: '.price, .price-label',
-            area: '.area, .surface-label',
-            title: '.listing-title, .title',
-            url: 'a.listing-link'
+      try {
+        const response = await firecrawl.crawlUrl(url, {
+          limit: 5,
+          scrapeOptions: {
+            selectors: {
+              price: '.price, .price-label',
+              area: '.area, .surface-label',
+              title: '.listing-title, .title',
+              url: 'a.listing-link'
+            }
           }
-        }
-      });
+        });
 
-      if (response.success) {
-        results.push(...response.data);
+        console.log(`Crawl response for ${url}:`, response);
+
+        if (response.success) {
+          results.push(...response.data);
+        }
+      } catch (error) {
+        console.error(`Error crawling ${url}:`, error);
+        // Continue with other URLs even if one fails
       }
     }
 
@@ -61,14 +74,22 @@ Deno.serve(async (req) => {
         Math.abs(item.area - area) <= 20 // À 20m² près
       );
 
+    console.log('Filtered listings:', listings);
+
     return new Response(JSON.stringify(listings), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
     console.error('Error in fetch-listings:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({ 
+        error: error.message,
+        details: error.stack
+      }), 
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    );
   }
 });
