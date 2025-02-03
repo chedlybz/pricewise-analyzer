@@ -37,10 +37,14 @@ Deno.serve(async (req) => {
     
     console.log('Crawling SeLoger URL:', selogerUrl);
 
-    // Simple scrape request following the documentation example
+    // Make request with correct API structure
     const response = await firecrawl.crawlUrl(selogerUrl, {
       formats: ['html'],
-      limit: 5
+      waitFor: 2000, // Wait for dynamic content to load
+      timeout: 30000, // 30 seconds timeout
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      }
     });
 
     console.log('SeLoger crawl response:', response);
