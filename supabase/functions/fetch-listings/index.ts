@@ -37,14 +37,16 @@ Deno.serve(async (req) => {
     
     console.log('Crawling SeLoger URL:', selogerUrl);
 
-    // Make request with correct API structure
-    const response = await firecrawl.crawlUrl(selogerUrl, {
-      formats: ['html'],
-      waitFor: 2000, // Wait for dynamic content to load
-      timeout: 30000, // 30 seconds timeout
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-      }
+    // Make request with correct API structure according to docs
+    const response = await firecrawl.scrapeUrl(selogerUrl, {
+      scrapeRules: {
+        title: { selector: '[data-testid="sl.list-item.title"]', type: 'text' },
+        price: { selector: '[data-testid="sl.price"]', type: 'text' },
+        area: { selector: '[data-testid="sl.list-item.surface"]', type: 'text' },
+        url: { selector: 'a', type: 'attribute', attribute: 'href' }
+      },
+      waitUntil: 'networkidle0',
+      timeout: 30000
     });
 
     console.log('SeLoger crawl response:', response);
@@ -53,28 +55,15 @@ Deno.serve(async (req) => {
       throw new Error('Failed to crawl SeLoger');
     }
 
-    // Transform the raw HTML response into structured listings
-    const listings = response.data.map(item => {
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(item.html, 'text/html');
-      
-      const titleEl = doc.querySelector('[data-testid="sl.list-item.title"]');
-      const priceEl = doc.querySelector('[data-testid="sl.price"]');
-      const areaEl = doc.querySelector('[data-testid="sl.list-item.surface"]');
-      const linkEl = doc.querySelector('a');
-
-      const price = priceEl ? parseInt(priceEl.textContent?.replace(/[^0-9]/g, '') || '0') : 0;
-      const extractedArea = areaEl ? parseInt(areaEl.textContent?.replace(/[^0-9]/g, '') || '0') : 0;
-
-      return {
-        title: titleEl?.textContent || 'Annonce SeLoger',
-        price: price,
-        area: extractedArea,
-        location,
-        propertyType,
-        url: linkEl?.href?.startsWith('http') ? linkEl.href : `https://www.seloger.com${linkEl?.href || ''}`
-      };
-    }).filter(listing => listing.price > 0 && listing.area > 0);
+    // Transform the scraped data into structured listings
+    const listings = response.data.map(item => ({
+      title: item.title || 'Annonce SeLoger',
+      price: parseInt(item.price?.replace(/[^0-9]/g, '') || '0'),
+      area: parseInt(item.area?.replace(/[^0-9]/g, '') || '0'),
+      location,
+      propertyType,
+      url: item.url?.startsWith('http') ? item.url : `https://www.seloger.com${item.url || ''}`
+    })).filter(listing => listing.price > 0 && listing.area > 0);
 
     console.log('Processed listings:', listings);
 
