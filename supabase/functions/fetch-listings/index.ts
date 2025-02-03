@@ -37,14 +37,14 @@ Deno.serve(async (req) => {
     
     console.log('Crawling SeLoger URL:', selogerUrl);
 
-    // Crawl SeLoger with updated API structure
+    // Crawl SeLoger with correct API structure
     const response = await firecrawl.crawlUrl(selogerUrl, {
       limit: 5,
-      scrapeRules: {
+      selectors: {
         listings: {
           selector: '[data-testid="sl.list-item"]',
           type: 'list',
-          fields: {
+          properties: {
             title: {
               selector: '[data-testid="sl.list-item.title"]',
               type: 'text'
@@ -52,12 +52,12 @@ Deno.serve(async (req) => {
             price: {
               selector: '[data-testid="sl.price"]',
               type: 'text',
-              transform: (text: string) => parseInt(text.replace(/[^0-9]/g, ''))
+              transform: (text) => parseInt(text.replace(/[^0-9]/g, ''))
             },
             area: {
               selector: '[data-testid="sl.list-item.surface"]',
               type: 'text',
-              transform: (text: string) => parseInt(text.replace(/[^0-9]/g, ''))
+              transform: (text) => parseInt(text.replace(/[^0-9]/g, ''))
             },
             url: {
               selector: 'a',
