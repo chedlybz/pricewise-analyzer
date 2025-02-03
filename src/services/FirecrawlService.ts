@@ -16,7 +16,7 @@ export class FirecrawlService {
     area: number;
   }): Promise<PropertyListing[]> {
     try {
-      console.log('Fetching listings with params:', searchParams);
+      console.log('Fetching SeLoger listings with params:', searchParams);
       
       const { data, error } = await supabase.functions.invoke('fetch-listings', {
         body: searchParams
@@ -27,7 +27,7 @@ export class FirecrawlService {
         throw error;
       }
 
-      console.log('Received listings:', data);
+      console.log('Received SeLoger listings:', data);
       return data || [];
     } catch (error) {
       console.error('Error in fetchListings:', error);
