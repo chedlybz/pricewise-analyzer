@@ -37,34 +37,32 @@ Deno.serve(async (req) => {
     
     console.log('Crawling SeLoger URL:', selogerUrl);
 
-    // Crawl SeLoger
+    // Crawl SeLoger with updated API structure
     const response = await firecrawl.crawlUrl(selogerUrl, {
       limit: 5,
-      scrapeOptions: {
-        selectors: {
-          listings: {
-            selector: '[data-testid="sl.list-item"]',
-            type: 'list',
-            properties: {
-              title: {
-                selector: '[data-testid="sl.list-item.title"]',
-                type: 'text'
-              },
-              price: {
-                selector: '[data-testid="sl.price"]',
-                type: 'text',
-                transform: (text) => parseInt(text.replace(/[^0-9]/g, ''))
-              },
-              area: {
-                selector: '[data-testid="sl.list-item.surface"]',
-                type: 'text',
-                transform: (text) => parseInt(text.replace(/[^0-9]/g, ''))
-              },
-              url: {
-                selector: 'a',
-                type: 'attribute',
-                attribute: 'href'
-              }
+      scrapeRules: {
+        listings: {
+          selector: '[data-testid="sl.list-item"]',
+          type: 'list',
+          fields: {
+            title: {
+              selector: '[data-testid="sl.list-item.title"]',
+              type: 'text'
+            },
+            price: {
+              selector: '[data-testid="sl.price"]',
+              type: 'text',
+              transform: (text: string) => parseInt(text.replace(/[^0-9]/g, ''))
+            },
+            area: {
+              selector: '[data-testid="sl.list-item.surface"]',
+              type: 'text',
+              transform: (text: string) => parseInt(text.replace(/[^0-9]/g, ''))
+            },
+            url: {
+              selector: 'a',
+              type: 'attribute',
+              attribute: 'href'
             }
           }
         }
