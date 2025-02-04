@@ -1,6 +1,8 @@
 import { useState } from "react";
 import PriceAnalysisForm from "@/components/PriceAnalysisForm";
 import AnalysisResult from "@/components/AnalysisResult";
+import { FirecrawlService } from "@/services/FirecrawlService";
+import { toast } from "@/hooks/use-toast";
 
 interface FormData {
   price: number;
