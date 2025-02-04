@@ -35,15 +35,13 @@ Deno.serve(async (req) => {
 
     // Scrape MeilleursAgents for price data
     const priceResponse = await firecrawl.scrapeUrl(meilleursAgentsUrl, {
-      scrapeRules: {
+      selectors: {
         priceRange: { 
           selector: '.prices-summary__price--desktop', 
           type: 'text',
           multiple: true 
         }
-      },
-      waitUntil: 'networkidle0',
-      timeout: 30000
+      }
     });
 
     console.log('MeilleursAgents response:', priceResponse);
@@ -72,14 +70,12 @@ Deno.serve(async (req) => {
 
     // Scrape SeLoger listings
     const listingsResponse = await firecrawl.scrapeUrl(selogerUrl, {
-      scrapeRules: {
+      selectors: {
         title: { selector: '[data-testid="sl.list-item.title"]', type: 'text' },
         price: { selector: '[data-testid="sl.price"]', type: 'text' },
         area: { selector: '[data-testid="sl.list-item.surface"]', type: 'text' },
         url: { selector: 'a', type: 'attribute', attribute: 'href' }
-      },
-      waitUntil: 'networkidle0',
-      timeout: 30000
+      }
     });
 
     console.log('SeLoger listings response:', listingsResponse);
