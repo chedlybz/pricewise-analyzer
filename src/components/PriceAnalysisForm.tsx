@@ -9,6 +9,7 @@ interface FormData {
   price: number;
   area: number;
   location: string;
+  city: string;
   propertyType: string;
 }
 
@@ -21,6 +22,7 @@ const PriceAnalysisForm = ({ onSubmit }: PriceAnalysisFormProps) => {
     price: 0,
     area: 0,
     location: "",
+    city: "",
     propertyType: "apartment",
   });
 
@@ -54,6 +56,19 @@ const PriceAnalysisForm = ({ onSubmit }: PriceAnalysisFormProps) => {
             min="0"
             value={formData.area}
             onChange={(e) => setFormData({ ...formData, area: Number(e.target.value) })}
+            className="w-full"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="city">Ville</Label>
+          <Input
+            id="city"
+            type="text"
+            required
+            placeholder="Paris"
+            value={formData.city}
+            onChange={(e) => setFormData({ ...formData, city: e.target.value })}
             className="w-full"
           />
         </div>

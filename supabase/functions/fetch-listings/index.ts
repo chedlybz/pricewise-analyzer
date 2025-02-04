@@ -1,6 +1,19 @@
 import { corsHeaders } from '../_shared/cors.ts';
 import FirecrawlApp from 'npm:@mendable/firecrawl-js';
 
+function generateMeilleursAgentsUrl(ville: string, codePostal: string) {
+  // Vérifier si la ville est Paris
+  if (ville.toLowerCase() === "paris" && codePostal.startsWith("75")) {
+    // Extraire l'arrondissement de Paris à partir du code postal
+    const arrondissement = parseInt(codePostal.substring(3), 10); // Ex: "75015" -> 15
+    if (arrondissement >= 1 && arrondissement <= 20) {
+      return `https://www.meilleursagents.com/prix-immobilier/paris-${arrondissement}eme-arrondissement-${codePostal}/`;
+    }
+  }
+  // Cas général pour toutes les autres villes
+  return `https://www.meilleursagents.com/prix-immobilier/${ville.toLowerCase()}-${codePostal}/`;
+}
+
 Deno.serve(async (req) => {
   try {
     // Handle CORS
@@ -13,10 +26,10 @@ Deno.serve(async (req) => {
       throw new Error('Request body is required');
     }
 
-    const { location, propertyType, area } = await req.json();
-    console.log('Received request params:', { location, propertyType, area });
+    const { location, city, propertyType, area } = await req.json();
+    console.log('Received request params:', { location, city, propertyType, area });
     
-    if (!location || !propertyType || !area) {
+    if (!location || !propertyType || !area || !city) {
       throw new Error('Missing required parameters');
     }
 
@@ -28,8 +41,8 @@ Deno.serve(async (req) => {
 
     const firecrawl = new FirecrawlApp({ apiKey });
 
-    // Construct MeilleursAgents URL with postal code
-    const meilleursAgentsUrl = `https://www.meilleursagents.com/prix-immobilier/${location}/`;
+    // Generate MeilleursAgents URL with city and postal code
+    const meilleursAgentsUrl = generateMeilleursAgentsUrl(city, location);
     
     console.log('Crawling MeilleursAgents URL:', meilleursAgentsUrl);
 

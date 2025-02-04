@@ -21,8 +21,22 @@ interface ListingsResponse {
 }
 
 export class FirecrawlService {
+  static generateMeilleursAgentsUrl(ville: string, codePostal: string) {
+    // Vérifier si la ville est Paris
+    if (ville.toLowerCase() === "paris" && codePostal.startsWith("75")) {
+      // Extraire l'arrondissement de Paris à partir du code postal
+      const arrondissement = parseInt(codePostal.substring(3), 10); // Ex: "75015" -> 15
+      if (arrondissement >= 1 && arrondissement <= 20) {
+        return `https://www.meilleursagents.com/prix-immobilier/paris-${arrondissement}eme-arrondissement-${codePostal}/`;
+      }
+    }
+    // Cas général pour toutes les autres villes
+    return `https://www.meilleursagents.com/prix-immobilier/${ville.toLowerCase()}-${codePostal}/`;
+  }
+
   static async fetchListings(searchParams: {
     location: string;
+    city: string;
     propertyType: string;
     area: number;
   }): Promise<ListingsResponse> {
