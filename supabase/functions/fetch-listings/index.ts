@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
     const { location, city, propertyType, area } = await req.json();
     console.log('Received request params:', { location, city, propertyType, area });
     
-    if (!location || !propertyType || !area || !city) {
+    if (!location || !propertyType || !area) {
       throw new Error('Missing required parameters');
     }
 
@@ -42,12 +42,26 @@ Deno.serve(async (req) => {
     const firecrawl = new FirecrawlApp({ apiKey });
 
     // Generate MeilleursAgents URL with city and postal code
-    const meilleursAgentsUrl = generateMeilleursAgentsUrl(city, location);
+    const meilleursAgentsUrl = generateMeilleursAgentsUrl(city || location, location);
     
     console.log('Crawling MeilleursAgents URL:', meilleursAgentsUrl);
-
-    // Scrape MeilleursAgents for price data
-    const priceResponse = await firecrawl.crawlUrl(meilleursAgentsUrl);
+    
+    const priceResponse = await firecrawl.scrapeUrl(meilleursAgentsUrl, {
+      scrapeRules: {
+        selectors: {
+          averagePrice: {
+            selector: '.prices-summary__price--desktop',
+            type: 'text'
+          },
+          priceRange: {
+            selector: '.prices-summary__range',
+            type: 'text'
+          }
+        }
+      },
+      waitUntil: 'networkidle0',
+      timeout: 30000
+    });
 
     console.log('MeilleursAgents response:', priceResponse);
 
@@ -55,14 +69,9 @@ Deno.serve(async (req) => {
       throw new Error('Failed to fetch price data from MeilleursAgents');
     }
 
-    // Extract average price per m2 for apartments
-    let averagePricePerM2 = 0;
-    if (priceResponse.data.priceRange && priceResponse.data.priceRange.length > 0) {
-      const prices = priceResponse.data.priceRange.map(price => 
-        parseInt(price.replace(/[^0-9]/g, ''))
-      );
-      averagePricePerM2 = prices[0]; // First price is usually the apartment average
-    }
+    // Extract average price per m2
+    const averagePricePerM2 = priceResponse.data.averagePrice ?
+      parseInt(priceResponse.data.averagePrice.replace(/[^0-9]/g, ''), 10) : 0;
 
     // Construct SeLoger URL for listings
     const propertyTypeParam = propertyType === 'apartment' ? '1' : '2';
@@ -74,7 +83,18 @@ Deno.serve(async (req) => {
     console.log('Crawling SeLoger URL:', selogerUrl);
 
     // Scrape SeLoger listings
-    const listingsResponse = await firecrawl.crawlUrl(selogerUrl);
+    const listingsResponse = await firecrawl.scrapeUrl(selogerUrl, {
+      scrapeRules: {
+        selectors: {
+          title: { selector: '[data-testid="sl.list-item.title"]', type: 'text' },
+          price: { selector: '[data-testid="sl.price"]', type: 'text' },
+          area: { selector: '[data-testid="sl.list-item.surface"]', type: 'text' },
+          url: { selector: 'a', type: 'attribute', attribute: 'href' }
+        }
+      },
+      waitUntil: 'networkidle0',
+      timeout: 30000
+    });
 
     console.log('SeLoger listings response:', listingsResponse);
 
