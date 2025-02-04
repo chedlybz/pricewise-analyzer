@@ -44,6 +44,7 @@ const AnalysisResult = ({
       try {
         const data = await FirecrawlService.fetchListings({
           location,
+          city: location.startsWith('75') ? 'Paris' : '', // Default to Paris for Paris postal codes
           propertyType,
           area
         });

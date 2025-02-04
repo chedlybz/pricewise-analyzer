@@ -47,15 +47,7 @@ Deno.serve(async (req) => {
     console.log('Crawling MeilleursAgents URL:', meilleursAgentsUrl);
 
     // Scrape MeilleursAgents for price data
-    const priceResponse = await firecrawl.scrapeUrl(meilleursAgentsUrl, {
-      selectors: {
-        priceRange: { 
-          selector: '.prices-summary__price--desktop', 
-          type: 'text',
-          multiple: true 
-        }
-      }
-    });
+    const priceResponse = await firecrawl.crawlUrl(meilleursAgentsUrl);
 
     console.log('MeilleursAgents response:', priceResponse);
 
@@ -82,14 +74,7 @@ Deno.serve(async (req) => {
     console.log('Crawling SeLoger URL:', selogerUrl);
 
     // Scrape SeLoger listings
-    const listingsResponse = await firecrawl.scrapeUrl(selogerUrl, {
-      selectors: {
-        title: { selector: '[data-testid="sl.list-item.title"]', type: 'text' },
-        price: { selector: '[data-testid="sl.price"]', type: 'text' },
-        area: { selector: '[data-testid="sl.list-item.surface"]', type: 'text' },
-        url: { selector: 'a', type: 'attribute', attribute: 'href' }
-      }
-    });
+    const listingsResponse = await firecrawl.crawlUrl(selogerUrl);
 
     console.log('SeLoger listings response:', listingsResponse);
 
