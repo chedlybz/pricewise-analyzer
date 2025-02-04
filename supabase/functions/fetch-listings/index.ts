@@ -33,9 +33,17 @@ Deno.serve(async (req) => {
     
     console.log('Fetching data from:', meilleursAgentsUrl);
     
+    // Get Supabase API Key
+    const supabaseApiKey = Deno.env.get('SUPABASE_API_KEY');
+    if (!supabaseApiKey) {
+      throw new Error('SUPABASE_API_KEY not configured');
+    }
+
     const priceResponse = await fetch("https://qdnzbnlxpwyndhtygoez.supabase.co/functions/v1/fetch-listings", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json" ,
+                "Authorization": `Bearer ${supabaseApiKey}`
+       },
       body: JSON.stringify({ url: meilleursAgentsUrl })
     });
     
