@@ -12,6 +12,7 @@ interface AnalysisResultProps {
   location: string;
   propertyType: string;
   area: number;
+  averagePricePerM2: number;
 }
 
 interface PropertyListing {
@@ -29,7 +30,8 @@ const AnalysisResult = ({
   difference,
   location,
   propertyType,
-  area
+  area,
+  averagePricePerM2
 }: AnalysisResultProps) => {
   const { toast } = useToast();
   const [listings, setListings] = useState<PropertyListing[]>([]);
@@ -45,7 +47,7 @@ const AnalysisResult = ({
           propertyType,
           area
         });
-        setListings(data);
+        setListings(data.listings);
       } catch (error) {
         console.error('Error fetching listings:', error);
         toast({
@@ -74,6 +76,11 @@ const AnalysisResult = ({
         <div className="flex justify-between items-center">
           <span className="text-gray-600">Prix moyen du marché</span>
           <span className="font-semibold">{marketPrice.toLocaleString('fr-FR')} €</span>
+        </div>
+
+        <div className="flex justify-between items-center">
+          <span className="text-gray-600">Prix moyen au m²</span>
+          <span className="font-semibold">{averagePricePerM2.toLocaleString('fr-FR')} €/m²</span>
         </div>
         
         <div className="flex justify-between items-center">

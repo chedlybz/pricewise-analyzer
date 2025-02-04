@@ -9,14 +9,25 @@ interface PropertyListing {
   title: string;
 }
 
+interface MarketData {
+  averagePricePerM2: number;
+  location: string;
+  propertyType: string;
+}
+
+interface ListingsResponse {
+  listings: PropertyListing[];
+  marketData: MarketData;
+}
+
 export class FirecrawlService {
   static async fetchListings(searchParams: {
     location: string;
     propertyType: string;
     area: number;
-  }): Promise<PropertyListing[]> {
+  }): Promise<ListingsResponse> {
     try {
-      console.log('Fetching SeLoger listings with params:', searchParams);
+      console.log('Fetching listings with params:', searchParams);
       
       const { data, error } = await supabase.functions.invoke('fetch-listings', {
         body: searchParams
@@ -27,8 +38,8 @@ export class FirecrawlService {
         throw error;
       }
 
-      console.log('Received SeLoger listings:', data);
-      return data || [];
+      console.log('Received listings response:', data);
+      return data;
     } catch (error) {
       console.error('Error in fetchListings:', error);
       throw error;

@@ -28,7 +28,40 @@ Deno.serve(async (req) => {
 
     const firecrawl = new FirecrawlApp({ apiKey });
 
-    // Construct SeLoger URL based on parameters
+    // Construct MeilleursAgents URL with postal code
+    const meilleursAgentsUrl = `https://www.meilleursagents.com/prix-immobilier/${location}/`;
+    
+    console.log('Crawling MeilleursAgents URL:', meilleursAgentsUrl);
+
+    // Scrape MeilleursAgents for price data
+    const priceResponse = await firecrawl.scrapeUrl(meilleursAgentsUrl, {
+      scrapeRules: {
+        priceRange: { 
+          selector: '.prices-summary__price--desktop', 
+          type: 'text',
+          multiple: true 
+        }
+      },
+      waitUntil: 'networkidle0',
+      timeout: 30000
+    });
+
+    console.log('MeilleursAgents response:', priceResponse);
+
+    if (!priceResponse.success) {
+      throw new Error('Failed to fetch price data from MeilleursAgents');
+    }
+
+    // Extract average price per m2 for apartments
+    let averagePricePerM2 = 0;
+    if (priceResponse.data.priceRange && priceResponse.data.priceRange.length > 0) {
+      const prices = priceResponse.data.priceRange.map(price => 
+        parseInt(price.replace(/[^0-9]/g, ''))
+      );
+      averagePricePerM2 = prices[0]; // First price is usually the apartment average
+    }
+
+    // Construct SeLoger URL for listings
     const propertyTypeParam = propertyType === 'apartment' ? '1' : '2';
     const areaMin = Math.max(area - 20, 0);
     const areaMax = area + 20;
@@ -37,8 +70,8 @@ Deno.serve(async (req) => {
     
     console.log('Crawling SeLoger URL:', selogerUrl);
 
-    // Make request with correct API structure according to docs
-    const response = await firecrawl.scrapeUrl(selogerUrl, {
+    // Scrape SeLoger listings
+    const listingsResponse = await firecrawl.scrapeUrl(selogerUrl, {
       scrapeRules: {
         title: { selector: '[data-testid="sl.list-item.title"]', type: 'text' },
         price: { selector: '[data-testid="sl.price"]', type: 'text' },
@@ -49,14 +82,14 @@ Deno.serve(async (req) => {
       timeout: 30000
     });
 
-    console.log('SeLoger crawl response:', response);
+    console.log('SeLoger listings response:', listingsResponse);
 
-    if (!response.success) {
-      throw new Error('Failed to crawl SeLoger');
+    if (!listingsResponse.success) {
+      throw new Error('Failed to fetch listings from SeLoger');
     }
 
     // Transform the scraped data into structured listings
-    const listings = response.data.map(item => ({
+    const listings = listingsResponse.data.map(item => ({
       title: item.title || 'Annonce SeLoger',
       price: parseInt(item.price?.replace(/[^0-9]/g, '') || '0'),
       area: parseInt(item.area?.replace(/[^0-9]/g, '') || '0'),
@@ -65,9 +98,19 @@ Deno.serve(async (req) => {
       url: item.url?.startsWith('http') ? item.url : `https://www.seloger.com${item.url || ''}`
     })).filter(listing => listing.price > 0 && listing.area > 0);
 
-    console.log('Processed listings:', listings);
+    // Add average price per m2 to the response
+    const response = {
+      listings,
+      marketData: {
+        averagePricePerM2,
+        location,
+        propertyType
+      }
+    };
 
-    return new Response(JSON.stringify(listings), {
+    console.log('Final response:', response);
+
+    return new Response(JSON.stringify(response), {
       headers: { 
         ...corsHeaders,
         'Content-Type': 'application/json'
@@ -79,7 +122,7 @@ Deno.serve(async (req) => {
     
     return new Response(
       JSON.stringify({
-        error: 'Failed to fetch listings',
+        error: 'Failed to fetch data',
         details: error.message
       }),
       {

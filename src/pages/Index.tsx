@@ -17,23 +17,31 @@ const Index = () => {
     location: string;
     propertyType: string;
     area: number;
+    averagePricePerM2: number;
   } | null>(null);
 
-  const handleAnalysis = (data: FormData) => {
-    // Simulation d'un calcul de prix du marché
-    // Dans une version réelle, ceci serait basé sur des données réelles
-    const averagePricePerM2 = data.propertyType === "apartment" ? 3500 : 3000;
-    const locationFactor = data.location.toLowerCase().includes('paris') ? 1.5 : 1;
-    const estimatedMarketPrice = Math.round(data.area * averagePricePerM2 * locationFactor);
-    
-    setAnalysis({
-      userPrice: data.price,
-      marketPrice: estimatedMarketPrice,
-      difference: data.price - estimatedMarketPrice,
-      location: data.location,
-      propertyType: data.propertyType,
-      area: data.area
-    });
+  const handleAnalysis = async (data: FormData) => {
+    try {
+      const response = await FirecrawlService.fetchListings(data);
+      const estimatedMarketPrice = Math.round(data.area * response.marketData.averagePricePerM2);
+      
+      setAnalysis({
+        userPrice: data.price,
+        marketPrice: estimatedMarketPrice,
+        difference: data.price - estimatedMarketPrice,
+        location: data.location,
+        propertyType: data.propertyType,
+        area: data.area,
+        averagePricePerM2: response.marketData.averagePricePerM2
+      });
+    } catch (error) {
+      console.error('Error analyzing price:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible d'analyser le prix pour le moment",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
@@ -58,6 +66,7 @@ const Index = () => {
               location={analysis.location}
               propertyType={analysis.propertyType}
               area={analysis.area}
+              averagePricePerM2={analysis.averagePricePerM2}
             />
           )}
         </div>

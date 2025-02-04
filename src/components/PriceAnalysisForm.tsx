@@ -59,11 +59,13 @@ const PriceAnalysisForm = ({ onSubmit }: PriceAnalysisFormProps) => {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="location">Ville</Label>
+          <Label htmlFor="location">Code Postal</Label>
           <Input
             id="location"
             type="text"
             required
+            pattern="[0-9]{5}"
+            placeholder="75001"
             value={formData.location}
             onChange={(e) => setFormData({ ...formData, location: e.target.value })}
             className="w-full"
