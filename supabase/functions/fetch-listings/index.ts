@@ -34,24 +34,35 @@ Deno.serve(async (req) => {
     console.log('Fetching data from:', meilleursAgentsUrl);
     
     const priceResponse = await firecrawl.scrapeUrl(meilleursAgentsUrl);
-
-    console.log('MeilleursAgents response:', priceResponse);
+    console.log('Raw Firecrawl response:', priceResponse);
 
     if (!priceResponse.success) {
-      throw new Error('Failed to fetch price data from MeilleursAgents');
+      throw new Error(`Failed to fetch price data: ${JSON.stringify(priceResponse)}`);
+    }
+
+    // Vérifier si data et html existent
+    if (!priceResponse.data || !priceResponse.data.html) {
+      console.error('Invalid response structure:', priceResponse);
+      throw new Error('Invalid response structure from Firecrawl');
     }
 
     // Extract price data from the HTML content
     const html = priceResponse.data.html;
+    console.log('HTML content length:', html.length);
+    
     const priceMatch = html.match(/(\d+[\s,]?\d*)\s*€\/m²/);
+    console.log('Price match result:', priceMatch);
+    
     const averagePricePerM2 = priceMatch ? 
       parseInt(priceMatch[1].replace(/\s/g, ''), 10) : 
-      null;
+      10000; // Prix par défaut si non trouvé
+
+    console.log('Calculated average price per m2:', averagePricePerM2);
 
     // Mock some listings data for demonstration
     const mockListings = [
       {
-        price: averagePricePerM2 ? averagePricePerM2 * 50 : 500000,
+        price: averagePricePerM2 * 50,
         area: 50,
         location: location,
         propertyType: "apartment",
@@ -60,14 +71,18 @@ Deno.serve(async (req) => {
       }
     ];
 
-    return new Response(JSON.stringify({
+    const response = {
       listings: mockListings,
       marketData: {
-        averagePricePerM2: averagePricePerM2 || 10000,
+        averagePricePerM2: averagePricePerM2,
         location: location,
         propertyType: "apartment"
       }
-    }), {
+    };
+
+    console.log('Sending response:', response);
+
+    return new Response(JSON.stringify(response), {
       headers: { 'Content-Type': 'application/json', ...corsHeaders }
     });
   } catch (error) {
