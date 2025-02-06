@@ -13,8 +13,8 @@ Deno.serve(async (req) => {
       throw new Error('Request body is required');
     }
 
-    const { location, city } = await req.json();
-    console.log('Received request params:', { location, city });
+    const { location, city, propertyType } = await req.json();
+    console.log('Received request params:', { location, city, propertyType });
     
     if (!location) {
       throw new Error('Missing required parameters');
@@ -40,20 +40,14 @@ Deno.serve(async (req) => {
     console.log('Fetching data from:', meilleursAgentsUrl);
     
     const priceResponse = await firecrawl.scrapeUrl(meilleursAgentsUrl);
-    console.log('Raw Firecrawl response structure:', JSON.stringify(priceResponse, null, 2));
+    console.log('Raw Firecrawl response:', JSON.stringify(priceResponse, null, 2));
 
     if (!priceResponse.success) {
       throw new Error(`Failed to fetch price data: ${JSON.stringify(priceResponse)}`);
     }
 
-    // Check response structure
-    if (!priceResponse.data) {
-      console.error('Missing data in response:', priceResponse);
-      throw new Error('Missing data in Firecrawl response');
-    }
-
     // Get content from response
-    const content = priceResponse.data.content || priceResponse.data.html || '';
+    const content = priceResponse.markdown || '';
     console.log('Content length:', content.length);
     
     if (!content) {
@@ -61,25 +55,35 @@ Deno.serve(async (req) => {
       throw new Error('No content found in Firecrawl response');
     }
 
-    // Extract price data from the content
-    const priceMatch = content.match(/(\d+[\s,]?\d*)\s*€\/m²/);
-    console.log('Price match result:', priceMatch);
+    // Extract price data from the content using a more specific pattern
+    let averagePricePerM2;
     
-    const averagePricePerM2 = priceMatch ? 
-      parseInt(priceMatch[1].replace(/\s/g, ''), 10) : 
-      10000; // Prix par défaut si non trouvé
+    if (propertyType === 'apartment') {
+      const apartmentMatch = content.match(/Appartement\s*\n\s*-\s*Prix m2 moyen\s*-\s*(\d+[\s,]?\d*)\s*€/);
+      console.log('Apartment price match:', apartmentMatch);
+      averagePricePerM2 = apartmentMatch ? parseInt(apartmentMatch[1].replace(/\s/g, ''), 10) : null;
+    } else {
+      const houseMatch = content.match(/Maison\s*\n\s*-\s*Prix m2 moyen\s*-\s*(\d+[\s,]?\d*)\s*€/);
+      console.log('House price match:', houseMatch);
+      averagePricePerM2 = houseMatch ? parseInt(houseMatch[1].replace(/\s/g, ''), 10) : null;
+    }
 
-    console.log('Calculated average price per m2:', averagePricePerM2);
+    if (!averagePricePerM2) {
+      console.error('Could not find price in content');
+      throw new Error('Could not extract price from the content');
+    }
 
-    // Mock some listings data for demonstration
+    console.log('Extracted average price per m2:', averagePricePerM2);
+
+    // Mock some listings data with the real average price
     const mockListings = [
       {
         price: averagePricePerM2 * 50,
         area: 50,
         location: location,
-        propertyType: "apartment",
+        propertyType: propertyType,
         url: meilleursAgentsUrl,
-        title: "Appartement type"
+        title: `${propertyType === 'apartment' ? 'Appartement' : 'Maison'} type`
       }
     ];
 
@@ -88,7 +92,7 @@ Deno.serve(async (req) => {
       marketData: {
         averagePricePerM2: averagePricePerM2,
         location: location,
-        propertyType: "apartment"
+        propertyType: propertyType
       }
     };
 
