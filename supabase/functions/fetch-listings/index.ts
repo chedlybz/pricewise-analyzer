@@ -13,8 +13,8 @@ Deno.serve(async (req) => {
       throw new Error('Request body is required');
     }
 
-    const { location } = await req.json();
-    console.log('Received request params:', { location });
+    const { location, city } = await req.json();
+    console.log('Received request params:', { location, city });
     
     if (!location) {
       throw new Error('Missing required parameters');
@@ -28,8 +28,14 @@ Deno.serve(async (req) => {
 
     const firecrawl = new FirecrawlApp({ apiKey });
 
-    // Construct MeilleursAgents URL with postal code
-    const meilleursAgentsUrl = `https://www.meilleursagents.com/prix-immobilier/${location}/`;
+    // Construct MeilleursAgents URL
+    let meilleursAgentsUrl;
+    if (city.toLowerCase() === 'paris' && location.startsWith('75')) {
+      const arrondissement = parseInt(location.substring(3), 10);
+      meilleursAgentsUrl = `https://www.meilleursagents.com/prix-immobilier/paris-${arrondissement}eme-arrondissement-${location}/`;
+    } else {
+      meilleursAgentsUrl = `https://www.meilleursagents.com/prix-immobilier/${city.toLowerCase()}-${location}/`;
+    }
     
     console.log('Fetching data from:', meilleursAgentsUrl);
     
