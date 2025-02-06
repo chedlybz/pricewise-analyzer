@@ -34,23 +34,29 @@ Deno.serve(async (req) => {
     console.log('Fetching data from:', meilleursAgentsUrl);
     
     const priceResponse = await firecrawl.scrapeUrl(meilleursAgentsUrl);
-    console.log('Raw Firecrawl response:', priceResponse);
+    console.log('Raw Firecrawl response structure:', JSON.stringify(priceResponse, null, 2));
 
     if (!priceResponse.success) {
       throw new Error(`Failed to fetch price data: ${JSON.stringify(priceResponse)}`);
     }
 
-    // Vérifier si data et html existent
-    if (!priceResponse.data || !priceResponse.data.html) {
-      console.error('Invalid response structure:', priceResponse);
-      throw new Error('Invalid response structure from Firecrawl');
+    // Check response structure
+    if (!priceResponse.data) {
+      console.error('Missing data in response:', priceResponse);
+      throw new Error('Missing data in Firecrawl response');
     }
 
-    // Extract price data from the HTML content
-    const html = priceResponse.data.html;
-    console.log('HTML content length:', html.length);
+    // Get content from response
+    const content = priceResponse.data.content || priceResponse.data.html || '';
+    console.log('Content length:', content.length);
     
-    const priceMatch = html.match(/(\d+[\s,]?\d*)\s*€\/m²/);
+    if (!content) {
+      console.error('No content found in response');
+      throw new Error('No content found in Firecrawl response');
+    }
+
+    // Extract price data from the content
+    const priceMatch = content.match(/(\d+[\s,]?\d*)\s*€\/m²/);
     console.log('Price match result:', priceMatch);
     
     const averagePricePerM2 = priceMatch ? 
