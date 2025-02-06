@@ -55,25 +55,41 @@ Deno.serve(async (req) => {
       throw new Error('No content found in Firecrawl response');
     }
 
-    // Extract price data from the content using a more specific pattern
-    let averagePricePerM2;
+    // Extract price data from the content using more specific patterns
+    let averagePricePerM2, minPricePerM2, maxPricePerM2;
     
     if (propertyType === 'apartment') {
       const apartmentMatch = content.match(/Appartement\s*\n\s*-\s*Prix m2 moyen\s*-\s*(\d+[\s,]?\d*)\s*€/);
+      const apartmentRangeMatch = content.match(/95% des appartements sont entre\s*\n\s*(\d+[\s,]?\d*)\s*€\s*\/\s*m²\s*\n\s*et\s*\n\s*(\d+[\s,]?\d*)\s*€\s*\/\s*m²/);
+      
       console.log('Apartment price match:', apartmentMatch);
+      console.log('Apartment range match:', apartmentRangeMatch);
+      
       averagePricePerM2 = apartmentMatch ? parseInt(apartmentMatch[1].replace(/\s/g, ''), 10) : null;
+      if (apartmentRangeMatch) {
+        minPricePerM2 = parseInt(apartmentRangeMatch[1].replace(/\s/g, ''), 10);
+        maxPricePerM2 = parseInt(apartmentRangeMatch[2].replace(/\s/g, ''), 10);
+      }
     } else {
       const houseMatch = content.match(/Maison\s*\n\s*-\s*Prix m2 moyen\s*-\s*(\d+[\s,]?\d*)\s*€/);
+      const houseRangeMatch = content.match(/95% des maisons sont entre\s*\n\s*(\d+[\s,]?\d*)\s*€\s*\/\s*m²\s*\n\s*et\s*\n\s*(\d+[\s,]?\d*)\s*€\s*\/\s*m²/);
+      
       console.log('House price match:', houseMatch);
+      console.log('House range match:', houseRangeMatch);
+      
       averagePricePerM2 = houseMatch ? parseInt(houseMatch[1].replace(/\s/g, ''), 10) : null;
+      if (houseRangeMatch) {
+        minPricePerM2 = parseInt(houseRangeMatch[1].replace(/\s/g, ''), 10);
+        maxPricePerM2 = parseInt(houseRangeMatch[2].replace(/\s/g, ''), 10);
+      }
     }
 
-    if (!averagePricePerM2) {
-      console.error('Could not find price in content');
-      throw new Error('Could not extract price from the content');
+    if (!averagePricePerM2 || !minPricePerM2 || !maxPricePerM2) {
+      console.error('Could not find all price data in content');
+      throw new Error('Could not extract all price data from the content');
     }
 
-    console.log('Extracted average price per m2:', averagePricePerM2);
+    console.log('Extracted prices:', { averagePricePerM2, minPricePerM2, maxPricePerM2 });
 
     // Mock some listings data with the real average price
     const mockListings = [
@@ -90,7 +106,9 @@ Deno.serve(async (req) => {
     const response = {
       listings: mockListings,
       marketData: {
-        averagePricePerM2: averagePricePerM2,
+        averagePricePerM2,
+        minPricePerM2,
+        maxPricePerM2,
         location: location,
         propertyType: propertyType
       }

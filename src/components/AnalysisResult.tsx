@@ -13,6 +13,8 @@ interface AnalysisResultProps {
   propertyType: string;
   area: number;
   averagePricePerM2: number;
+  minPricePerM2: number;
+  maxPricePerM2: number;
 }
 
 interface PropertyListing {
@@ -31,7 +33,9 @@ const AnalysisResult = ({
   location,
   propertyType,
   area,
-  averagePricePerM2
+  averagePricePerM2,
+  minPricePerM2,
+  maxPricePerM2
 }: AnalysisResultProps) => {
   const { toast } = useToast();
   const [listings, setListings] = useState<PropertyListing[]>([]);
@@ -44,7 +48,7 @@ const AnalysisResult = ({
       try {
         const data = await FirecrawlService.fetchListings({
           location,
-          city: location.startsWith('75') ? 'Paris' : '', // Default to Paris for Paris postal codes
+          city: location.startsWith('75') ? 'Paris' : '',
           propertyType,
           area
         });
@@ -82,6 +86,13 @@ const AnalysisResult = ({
         <div className="flex justify-between items-center">
           <span className="text-gray-600">Prix moyen au m²</span>
           <span className="font-semibold">{averagePricePerM2.toLocaleString('fr-FR')} €/m²</span>
+        </div>
+
+        <div className="flex justify-between items-center">
+          <span className="text-gray-600">Fourchette de prix au m²</span>
+          <span className="font-semibold">
+            {minPricePerM2.toLocaleString('fr-FR')} € - {maxPricePerM2.toLocaleString('fr-FR')} €
+          </span>
         </div>
         
         <div className="flex justify-between items-center">
