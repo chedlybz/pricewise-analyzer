@@ -33,31 +33,34 @@ Deno.serve(async (req) => {
     
     console.log('Fetching data from:', meilleursAgentsUrl);
     
-    // Get Supabase API Key
-    const supabaseApiKey = Deno.env.get('SUPABASE_API_KEY');
-    if (!supabaseApiKey) {
-      throw new Error('SUPABASE_API_KEY not configured');
-    }
-
-    const priceResponse = await fetch("https://qdnzbnlxpwyndhtygoez.supabase.co/functions/v1/fetch-listings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" ,
-                "Authorization": `Bearer ${supabaseApiKey}`
-       },
-      body: JSON.stringify({ url: meilleursAgentsUrl })
+    const priceResponse = await firecrawl.scrapeUrl(meilleursAgentsUrl, {
+      scrapeRules: {
+        selectors: {
+          averagePrice: {
+            selector: '.prices-summary__price--desktop',
+            type: 'text'
+          },
+          priceRange: {
+            selector: '.prices-summary__range',
+            type: 'text'
+          }
+        }
+      },
+      waitUntil: 'networkidle0',
+      timeout: 30000
     });
-    
-    const priceData = await priceResponse.json();
 
-    if (!priceResponse.ok) {
-      throw new Error(`Failed to fetch price data: ${JSON.stringify(priceData)}`);
+    console.log('MeilleursAgents response:', priceResponse);
+
+    if (!priceResponse.success) {
+      throw new Error('Failed to fetch price data from MeilleursAgents');
     }
 
     // Extract price data
-    const averagePricePerM2 = priceData.averagePrice ?
-      parseInt(priceData.averagePrice.replace(/[^0-9]/g, ''), 10) : null;
+    const averagePricePerM2 = priceResponse.data.averagePrice ?
+      parseInt(priceResponse.data.averagePrice.replace(/[^0-9]/g, ''), 10) : null;
 
-    const priceRange = priceData.priceRange || 'N/A';
+    const priceRange = priceResponse.data.priceRange || 'N/A';
 
     return new Response(JSON.stringify({
       averagePricePerM2,
