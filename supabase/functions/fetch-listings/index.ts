@@ -34,20 +34,16 @@ Deno.serve(async (req) => {
     console.log('Fetching data from:', meilleursAgentsUrl);
     
     const priceResponse = await firecrawl.scrapeUrl(meilleursAgentsUrl, {
-      scrapeRules: {
-        selectors: {
-          averagePrice: {
-            selector: '.prices-summary__price--desktop',
-            type: 'text'
-          },
-          priceRange: {
-            selector: '.prices-summary__range',
-            type: 'text'
-          }
+      selectors: {
+        averagePrice: {
+          selector: '.prices-summary__price--desktop',
+          type: 'text'
+        },
+        priceRange: {
+          selector: '.prices-summary__range',
+          type: 'text'
         }
-      },
-      waitUntil: 'networkidle0',
-      timeout: 30000
+      }
     });
 
     console.log('MeilleursAgents response:', priceResponse);
